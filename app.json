@@ -1,13 +1,13 @@
 {
   "expo": {
-    "name": "noteBooks",
-    "slug": "noteBooks",
-    "version": "1.0.0",
+    "name": "Notorica",
+    "slug": "notorica",
+    "version": "1.3.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/appIcon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/appSplash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -16,12 +16,16 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/appIcon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.itznishantthapa.noteBook"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    }
+      "favicon": "./assets/appIcon.png"
+    },
+    "plugins": [
+      "expo-font"
+    ]
   }
 }
