@@ -1,23 +1,24 @@
 // Color palette for box colors (slightly higher intensity while maintaining text visibility)
 export const boxColorPalette = [
-    "#fefeff", // Original White
-    "#f2f4f8", // Light Gray (more saturated)
-    "#e8f4ff", // Light Blue (more saturated)
-    "#fff0e8", // Light Peach (more saturated)
-    "#eafaef", // Light Mint (more saturated)
-    "#faeefa", // Light Pink (more saturated)
-    "#fffbe8", // Light Yellow (more saturated)
-    "#f4eaff", // Light Lavender (more saturated)
-    "#e8faf5", // Light Teal (more saturated)
-    "#eee8ff", // Light Purple (more saturated)
-    "#f4ffe8", // Light Lime (more saturated)
-    "#e8f0ff", // Light Sky Blue (more saturated)
+    "#f9fafb", // Soft Off-White
+    "#edf1f5", // Gentle Gray-Blue
+    "#e3f2fd", // Soft Sky Blue
+    "#ffe9e0", // Pastel Peach
+    "#e6f5ec", // Fresh Mint
+    "#fce9f1", // Light Rose
+    "#fff9db", // Pale Cream Yellow
+    "#f3e8ff", // Dreamy Lavender
+    "#e0f7f4", // Airy Teal
+    "#ebe7ff", // Soft Lilac
+    "#f0ffe1", // Spring Lime
+    "#e7efff", // Pale Periwinkle
 ];
+
 
 // Dark mode box colors (subtle dark tones with better visibility)
 export const darkBoxColorPalette = [
     "#212226", // Original Dark
-    "#1a1c20", // Darker
+    "#2c2f36", // Darker
     "#242838", // Navy Dark
     "#262626", // Black Dark
     "#20262c", // Slate Dark

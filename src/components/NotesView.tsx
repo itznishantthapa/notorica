@@ -1,6 +1,7 @@
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, Keyboard, InputAccessoryView, Platform, Alert } from 'react-native'
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, Keyboard, InputAccessoryView, Platform } from 'react-native'
 import React, { useState, useRef, useEffect } from 'react'
 import { wp, hp, fontSize } from '../utils/responsive'
+import CustomAlertModal from './CustomAlertModal'
 
 interface NotesViewProps {
     isDark: boolean;
@@ -14,6 +15,11 @@ const NotesView = ({ isDark, noteData, onSave }: NotesViewProps) => {
     const scrollViewRef = useRef(null)
     const contentInputRef = useRef(null)
     const inputAccessoryViewID = 'contentInput'
+
+    // Alert modal states
+    const [alertVisible, setAlertVisible] = useState(false)
+    const [alertTitle, setAlertTitle] = useState('')
+    const [alertMessage, setAlertMessage] = useState('')
 
     // Get the appropriate background color based on theme and note data
     const noteContainerBgColor = noteData
@@ -53,10 +59,28 @@ const NotesView = ({ isDark, noteData, onSave }: NotesViewProps) => {
         // No automatic scrolling to end - let natural selection position drive scrolling
     }
 
+    // Show custom alert
+    const showAlert = (title: string, message: string) => {
+        // Dismiss keyboard smoothly before showing the alert
+        Keyboard.dismiss();
+
+        // Small delay to ensure keyboard is fully dismissed before modal appears
+        setTimeout(() => {
+            setAlertTitle(title);
+            setAlertMessage(message);
+            setAlertVisible(true);
+        }, 100);
+    }
+
     // Handle save button press
     const handleSave = () => {
         if (!title.trim()) {
-            Alert.alert('Missing Title', 'Please enter a title for your note');
+            showAlert('Missing Title', 'Please enter a title for your note');
+            return;
+        }
+
+        if (!content.trim()) {
+            showAlert('Missing Content', 'Please enter some content for your note');
             return;
         }
 
@@ -127,6 +151,16 @@ const NotesView = ({ isDark, noteData, onSave }: NotesViewProps) => {
                     <Text style={styles.saveButtonText}>Save Note</Text>
                 </TouchableOpacity>
             </View>
+
+            {/* Custom Alert Modal */}
+            <CustomAlertModal
+                visible={alertVisible}
+                title={alertTitle}
+                message={alertMessage}
+                onClose={() => setAlertVisible(false)}
+                confirmText="OK"
+                isDark={isDark}
+            />
         </View>
     )
 }

@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect, useContext } from "react"
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, StatusBar, ActivityIndicator, Alert } from "react-native"
+import { useState, useEffect, useContext, useRef } from "react"
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, StatusBar, ActivityIndicator, Alert, Animated, Keyboard } from "react-native"
 import { useNavigation } from "@react-navigation/native"
 import NeonFolder from "../components/NeonFolder"
 import { Ionicons } from "@expo/vector-icons"
@@ -9,6 +9,7 @@ import { SafeAreaView } from "react-native-safe-area-context"
 import { AppContext } from "../../context/AppContext"
 import React from "react"
 import NepaliDate from 'nepali-datetime'
+import CustomAlertModal from '../components/CustomAlertModal'
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window")
 
@@ -60,6 +61,53 @@ const Dashboard = () => {
   const [currentDate, setCurrentDate] = useState("")
   const [nepaliDate, setNepaliDate] = useState("")
   const [dayProgress, setDayProgress] = useState(0)
+  const [motivationalTextIndex, setMotivationalTextIndex] = useState(0)
+
+  // Clear all notes alert state
+  const [clearAllVisible, setClearAllVisible] = useState(false);
+
+  // Animation values
+  const flipAnimation = useRef(new Animated.Value(0)).current;
+  const flipRotation = flipAnimation.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: ['0deg', '90deg', '0deg']
+  });
+
+  // Motivational phrases to display
+  const motivationalPhrases = [
+    "Day Elapsed",
+    "Time flies",
+    "Be the pilot"
+  ]
+
+  // Set up animation for motivational text
+  useEffect(() => {
+    const animateText = () => {
+      // Start flip-out animation
+      Animated.timing(flipAnimation, {
+        toValue: 0.5,
+        duration: 300,
+        useNativeDriver: true
+      }).start(() => {
+        // Change text when flipped
+        setMotivationalTextIndex(prevIndex => (prevIndex + 1) % motivationalPhrases.length);
+
+        // Flip back in with new text
+        Animated.timing(flipAnimation, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true
+        }).start(() => {
+          // Reset animation value for next cycle
+          flipAnimation.setValue(0);
+        });
+      });
+    };
+
+    // Start cycling animation every 3 seconds
+    const interval = setInterval(animateText, 3000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Calculate current date and day progress
   useEffect(() => {
@@ -145,21 +193,18 @@ const Dashboard = () => {
   };
 
   const handleClearAllNotes = () => {
-    Alert.alert(
-      'Clear All Notes',
-      'Are you sure you want to delete all your notes? This cannot be undone.',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel'
-        },
-        {
-          text: 'Clear All',
-          style: 'destructive',
-          onPress: () => dispatchUserNotes({ type: "SET_NOTES", payload: [] })
-        }
-      ]
-    );
+    // Dismiss keyboard smoothly before showing alert
+    Keyboard.dismiss();
+
+    // Small delay to ensure keyboard is fully dismissed
+    setTimeout(() => {
+      setClearAllVisible(true);
+    }, 100);
+  };
+
+  const confirmClearAll = () => {
+    dispatchUserNotes({ type: "SET_NOTES", payload: [] });
+    setClearAllVisible(false);
   };
 
   // Settings options
@@ -292,7 +337,17 @@ const Dashboard = () => {
 
         <View style={styles.progressBarContainer}>
           <View style={styles.progressBarLabel}>
-            <Text style={[styles.progressLabelText, { color: isDark ? '#ffffff' : '#000000' }]}>Day Progress</Text>
+            <Animated.Text
+              style={[
+                styles.progressLabelText,
+                {
+                  color: isDark ? '#ffffff' : '#000000',
+                  transform: [{ rotateX: flipRotation }]
+                }
+              ]}
+            >
+              {motivationalPhrases[motivationalTextIndex]}
+            </Animated.Text>
             <Text style={[styles.progressPercentText, { color: isDark ? '#ffffff' : '#000000' }]}>{dayProgress.toFixed(0)}%</Text>
           </View>
           <View style={[styles.progressBar, { backgroundColor: isDark ? '#3a3c44' : '#f5f5f5' }]}>
@@ -386,6 +441,19 @@ const Dashboard = () => {
           </ScrollView>
         )}
       </View>
+
+      {/* Clear All Notes confirmation */}
+      <CustomAlertModal
+        visible={clearAllVisible}
+        title="Clear All Notes"
+        message="Are you sure you want to delete all your notes? This cannot be undone."
+        onClose={() => setClearAllVisible(false)}
+        onConfirm={confirmClearAll}
+        confirmText="Clear All"
+        cancelText="Cancel"
+        isDark={isDark}
+        isWarning={true}
+      />
     </SafeAreaView>
   )
 }

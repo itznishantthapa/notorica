@@ -28,7 +28,12 @@ const CreateNote = ({ navigation, route }) => {
   const handleSaveNote = (data) => {
     const now = new Date();
     const currentDate = now.toLocaleDateString();
-    const currentTime = now.getHours() + ':' + now.getMinutes();
+
+    // Format time with leading zeros for consistent parsing
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    const currentTime = `${hours}:${minutes}`;
+    const timestamp = now.getTime();
 
     if (isEditing) {
       // Update existing note
@@ -38,7 +43,7 @@ const CreateNote = ({ navigation, route }) => {
         content: data.content,
         date: currentDate,
         time: currentTime,
-        lastEdited: now.getTime(), // Store timestamp for sorting
+        lastEdited: timestamp, // Store timestamp for sorting
       }
 
       dispatchUserNotes({
@@ -48,13 +53,13 @@ const CreateNote = ({ navigation, route }) => {
     } else {
       // Create new note with random colors
       const newNote = {
-        id: Date.now().toString(),
+        id: timestamp.toString(),
         title: data.title,
         content: data.content,
         date: currentDate,
         time: currentTime,
-        created: now.getTime(), // Store timestamp for sorting
-        lastEdited: now.getTime(),
+        created: timestamp, // Store timestamp for sorting
+        lastEdited: timestamp,
         labelBgColorForLightMode: getRandomColor(labelColorPalette),
         labelBgColorForDarkMode: getRandomColor(labelColorPalette),
         boxBgColorForLightMode: getRandomColor(boxColorPalette),

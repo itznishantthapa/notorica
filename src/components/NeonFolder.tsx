@@ -1,10 +1,11 @@
-import { StyleSheet, Text, View, TouchableOpacity, Modal, Pressable, ViewStyle, Alert, ToastAndroid, Platform } from 'react-native'
+import { StyleSheet, Text, View, TouchableOpacity, Modal, Pressable, ViewStyle, ToastAndroid, Platform, Keyboard } from 'react-native'
 import React, { useContext, useState, useEffect } from 'react'
 import { FontAwesome, MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { labelColorPalette } from '../colors/labelColorPalette/labelColorPalette';
 import { darkBoxColorPalette, boxColorPalette } from '../colors/boxColorPalette/boxColorPalette';
 import MenuModal from './MenuModal';
 import ColorPickerModal from './ColorPickerModal';
+import CustomAlertModal from './CustomAlertModal';
 import { AppContext } from '../../context/AppContext';
 import { useNavigation } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
@@ -17,17 +18,6 @@ type MenuOption = {
     color: string;
     action: () => void;
 };
-
-const samplePreviews = [
-    "Today I learned about the importance of...",
-    "Meeting notes: Discussed project timeline...",
-    "Remember to call John about the upcoming...",
-    "Ideas for new project: 1) Create a mobile...",
-    "Shopping list: Milk, Eggs, Bread, Cheese...",
-    "Book recommendations from Sarah: 1984...",
-    "Today's weather was perfect for hiking...",
-    "Tasks for tomorrow: Complete presentation..."
-];
 
 interface NeonFolderProps {
     folder: any;
@@ -83,73 +73,84 @@ const NeonFolder = ({ folder, onPress, isSettings = false, settingsOptions }: Ne
 
     // Calculate time ago from the date (skip for special notes)
     useEffect(() => {
-        if (!isSettings && !isCreateNote && date) {
-            // Parse the date string (assuming format MM/DD/YYYY)
-            const parts = date.split('/');
-            if (parts.length === 3) {
-                const month = parseInt(parts[0]) - 1; // Month is 0-indexed in JS Date
-                const day = parseInt(parts[1]);
-                const year = parseInt(parts[2]);
+        const calculateTimeAgo = () => {
+            if (!isSettings && !isCreateNote && date) {
+                // Parse the date string (assuming format MM/DD/YYYY)
+                const parts = date.split('/');
+                if (parts.length === 3) {
+                    const month = parseInt(parts[0]) - 1; // Month is 0-indexed in JS Date
+                    const day = parseInt(parts[1]);
+                    const year = parseInt(parts[2]);
 
-                // Also parse time if available (assuming format HH:MM)
-                let hours = 0;
-                let minutes = 0;
-                if (folder.time) {
-                    const timeParts = folder.time.split(':');
-                    if (timeParts.length >= 2) {
-                        hours = parseInt(timeParts[0]);
-                        minutes = parseInt(timeParts[1]);
+                    // Also parse time if available (assuming format HH:MM)
+                    let hours = 0;
+                    let minutes = 0;
+                    if (folder.time) {
+                        const timeParts = folder.time.split(':');
+                        if (timeParts.length >= 2) {
+                            hours = parseInt(timeParts[0]);
+                            minutes = parseInt(timeParts[1]);
+                        }
+                    }
+
+                    const savedDate = new Date(year, month, day, hours, minutes);
+                    const now = new Date();
+
+                    // Calculate the difference in milliseconds
+                    const differenceMs = Math.max(1000, now.getTime() - savedDate.getTime()); // Ensure at least 1 second difference
+
+                    // Convert to appropriate time unit
+                    const minuteMs = 60 * 1000;
+                    const hourMs = 60 * minuteMs;
+                    const dayMs = 24 * hourMs;
+
+                    // Store total minutes for sorting (will be used by parent component)
+                    const totalMinutes = Math.floor(differenceMs / minuteMs);
+                    setTimeValue(totalMinutes);
+
+                    // Updated time calculation logic
+                    if (differenceMs < minuteMs) {
+                        // Less than a minute
+                        setTimeAgo('Just now');
+                    } else if (differenceMs < hourMs) {
+                        // Less than an hour
+                        const mins = Math.floor(differenceMs / minuteMs);
+                        setTimeAgo(`${mins} ${mins === 1 ? 'min' : 'mins'} ago`);
+                    } else if (differenceMs < dayMs) {
+                        // Less than a day
+                        const hours = Math.floor(differenceMs / hourMs);
+                        setTimeAgo(`${hours} ${hours === 1 ? 'hour' : 'hours'} ago`);
+                    } else {
+                        // Days
+                        const days = Math.floor(differenceMs / dayMs);
+                        setTimeAgo(`${days} ${days === 1 ? 'day' : 'days'} ago`);
                     }
                 }
-
-                const savedDate = new Date(year, month, day, hours, minutes);
-                const now = new Date();
-
-                // Calculate the difference in milliseconds
-                const differenceMs = now.getTime() - savedDate.getTime();
-
-                // Convert to appropriate time unit
-                const minuteMs = 60 * 1000;
-                const hourMs = 60 * minuteMs;
-                const dayMs = 24 * hourMs;
-
-                // Store total minutes for sorting (will be used by parent component)
-                const totalMinutes = Math.floor(differenceMs / minuteMs);
-                setTimeValue(totalMinutes);
-
-                if (differenceMs < minuteMs) {
-                    // Less than a minute
-                    setTimeAgo('Just now');
-                } else if (differenceMs < hourMs) {
-                    // Less than an hour
-                    const mins = Math.floor(differenceMs / minuteMs);
-                    setTimeAgo(`${mins} ${mins === 1 ? 'min' : 'mins'} ago`);
-                } else if (differenceMs < dayMs) {
-                    // Less than a day
-                    const hours = Math.floor(differenceMs / hourMs);
-                    setTimeAgo(`${hours} ${hours === 1 ? 'hour' : 'hours'} ago`);
-                } else {
-                    // Days
-                    const days = Math.floor(differenceMs / dayMs);
-                    setTimeAgo(`${days} ${days === 1 ? 'day' : 'days'} ago`);
-                }
             }
-        }
-    }, [date, isSettings, isCreateNote]);
+        };
+
+        // Calculate time immediately on mount
+        calculateTimeAgo();
+
+        // Set up an interval to update time every minute
+        const timeUpdateInterval = setInterval(calculateTimeAgo, 60000);
+
+        // Clean up interval on unmount
+        return () => clearInterval(timeUpdateInterval);
+    }, [date, isSettings, isCreateNote, folder.time]);
 
     // Get the preview text (either from content or sample data)
     const getPreviewText = () => {
         if (isCreateNote) {
             return "Tap to start notes";
         } else if (isSettings) {
-            return "Long Press Me!";
+            return "Press & Hold";
         } else if (content) {
             // Use actual content if available, trim it for preview
             return content.length > 100 ? content.substring(0, 100) + '...' : content;
         } else {
-            // Fallback to sample previews
-            const previewIndex = parseInt(id) % samplePreviews.length;
-            return samplePreviews[previewIndex];
+            // Return empty content message instead of using sample previews
+            return "No content";
         }
     };
 
@@ -173,6 +174,9 @@ const NeonFolder = ({ folder, onPress, isSettings = false, settingsOptions }: Ne
 
     // Copy note content
     const handleCopyContent = async () => {
+        // Dismiss keyboard first
+        Keyboard.dismiss();
+
         const textToCopy = `${title}\n\n${content || getPreviewText()}`;
         await Clipboard.setStringAsync(textToCopy);
 
@@ -180,7 +184,13 @@ const NeonFolder = ({ folder, onPress, isSettings = false, settingsOptions }: Ne
         if (Platform.OS === 'android') {
             ToastAndroid.show('Content copied to clipboard', ToastAndroid.SHORT);
         } else {
-            Alert.alert('Copied', 'Note content copied to clipboard');
+            // Small delay to ensure keyboard is fully dismissed
+            setTimeout(() => {
+                // Use custom alert instead
+                setAlertTitle('Copied');
+                setAlertMessage('Note content copied to clipboard');
+                setAlertVisible(true);
+            }, 100);
         }
 
         setMenuVisible(false);
@@ -196,32 +206,31 @@ const NeonFolder = ({ folder, onPress, isSettings = false, settingsOptions }: Ne
         navigation.navigate('CreateNote', { noteData: folder });
     };
 
+    // Modal states
+    const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
+
+    // States for non-delete alerts
+    const [alertVisible, setAlertVisible] = useState(false);
+    const [alertTitle, setAlertTitle] = useState('');
+    const [alertMessage, setAlertMessage] = useState('');
+
     // Delete note with confirmation
     const handleDeleteNote = () => {
-        Alert.alert(
-            'Delete Note',
-            `Are you sure you want to delete "${title}"?`,
-            [
-                {
-                    text: 'Cancel',
-                    style: 'cancel',
-                    onPress: () => {
-                        setMenuVisible(false);
-                        setIsActive(false);
-                    }
-                },
-                {
-                    text: 'Delete',
-                    style: 'destructive',
-                    onPress: () => {
-                        // Dispatch delete action
-                        dispatchUserNotes({ type: "DELETE_NOTE", payload: id });
-                        setMenuVisible(false);
-                        setIsActive(false);
-                    }
-                }
-            ]
-        );
+        // Dismiss keyboard first
+        Keyboard.dismiss();
+
+        // Small delay to ensure keyboard is fully dismissed
+        setTimeout(() => {
+            setMenuVisible(false);
+            setDeleteConfirmVisible(true);
+        }, 100);
+    };
+
+    // Confirm deletion
+    const confirmDelete = () => {
+        dispatchUserNotes({ type: "DELETE_NOTE", payload: id });
+        setDeleteConfirmVisible(false);
+        setIsActive(false);
     };
 
     // Handle label color selection
@@ -409,6 +418,32 @@ const NeonFolder = ({ folder, onPress, isSettings = false, settingsOptions }: Ne
                 handleCloseMenu={handleCloseMenu}
                 menuOptions={menuOptions}
                 menuPosition={menuPosition}
+                isDark={isDark}
+            />
+
+            {/* Delete confirmation modal */}
+            <CustomAlertModal
+                visible={deleteConfirmVisible}
+                title="Delete Note"
+                message={`Are you sure you want to delete "${title}"?`}
+                onClose={() => {
+                    setDeleteConfirmVisible(false);
+                    setIsActive(false);
+                }}
+                onConfirm={confirmDelete}
+                confirmText="Delete"
+                cancelText="Cancel"
+                isDark={isDark}
+                isWarning={true}
+            />
+
+            {/* Alert for copy confirmation (iOS) */}
+            <CustomAlertModal
+                visible={alertVisible}
+                title={alertTitle}
+                message={alertMessage}
+                onClose={() => setAlertVisible(false)}
+                confirmText="OK"
                 isDark={isDark}
             />
 
